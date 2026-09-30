@@ -133,7 +133,7 @@ schema is additive; there are no destructive migrations in the MVP.
 
 ## Facilitator guide (plain language)
 
-- Before a member's first session, open Admin → Custom Fields → each **Snapshot**
+- Before a member's first session, open Admin → Custom Fields → each **IOTA Baseline**
   field → Responses, and find the member.
 - Their **IOTA North Star** is also on their profile under the IOTA North Star field.
 - Treat answers as confidential. Do not copy them into email, chat or notes tools.
