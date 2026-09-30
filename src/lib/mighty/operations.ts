@@ -46,6 +46,31 @@ export const OWN_ANSWER_QUERY = /* GraphQL */ `
   }
 `;
 
+// Member-visible read path for the viewer's own answers (works for hidden fields
+// where network.customField(id) returns NOT_FOUND to members).
+export const ME_RESPONSES_QUERY = /* GraphQL */ `
+  query CompassMyResponses {
+    me {
+      customFieldResponses(first: 50, answeredOnly: true) {
+        nodes { text customField { id } }
+      }
+    }
+  }
+`;
+
+// Used only by the Phase 0 probe to prove a member CANNOT read another member.
+export const OTHER_MEMBER_RESPONSES_QUERY = /* GraphQL */ `
+  query CompassOtherResponses($memberId: ID!) {
+    node(id: $memberId) {
+      ... on Member {
+        customFieldResponses(first: 50, answeredOnly: true) {
+          nodes { text customField { id } }
+        }
+      }
+    }
+  }
+`;
+
 type MeResult = { me: { id: string } | null };
 
 export async function getViewerId(accessToken: string): Promise<string> {
@@ -94,9 +119,19 @@ export async function writeOwnAnswer(
   }
 }
 
-type OwnAnswerResult = {
-  network: { customField: { answers: { nodes: { text: string | null }[] } } | null } | null;
+type ResponsesResult = {
+  me: { customFieldResponses: { nodes: { text: string | null; customField: { id: string } | null }[] } } | null;
 };
+
+/** The viewer's own answers keyed by custom-field GlobalID. */
+export async function readOwnAnswers(accessToken: string): Promise<Map<string, string>> {
+  const data = await mightyGraphql<ResponsesResult>(accessToken, ME_RESPONSES_QUERY);
+  const out = new Map<string, string>();
+  for (const n of data.me?.customFieldResponses.nodes ?? []) {
+    if (n.customField?.id && typeof n.text === 'string') out.set(String(n.customField.id), n.text);
+  }
+  return out;
+}
 
 /** Best-effort preload of the viewer's current answer; null if unavailable. */
 export async function readOwnAnswer(
@@ -104,11 +139,7 @@ export async function readOwnAnswer(
   args: { customFieldId: string; memberId: string },
 ): Promise<string | null> {
   try {
-    const data = await mightyGraphql<OwnAnswerResult>(accessToken, OWN_ANSWER_QUERY, {
-      fieldId: args.customFieldId,
-      memberId: args.memberId,
-    });
-    return data.network?.customField?.answers.nodes[0]?.text ?? null;
+    return (await readOwnAnswers(accessToken)).get(args.customFieldId) ?? null;
   } catch {
     return null;
   }

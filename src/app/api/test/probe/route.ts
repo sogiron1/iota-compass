@@ -2,7 +2,13 @@ import { z } from 'zod';
 import { json, withSession } from '@/lib/http';
 import { getAccessToken } from '@/lib/credentials';
 import { mightyGraphql, MightyApiError } from '@/lib/mighty/graphql';
-import { UPDATE_ANSWER_MUTATION, OWN_ANSWER_QUERY, normalize } from '@/lib/mighty/operations';
+import {
+  UPDATE_ANSWER_MUTATION,
+  OWN_ANSWER_QUERY,
+  OTHER_MEMBER_RESPONSES_QUERY,
+  readOwnAnswers,
+  normalize,
+} from '@/lib/mighty/operations';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,12 +48,28 @@ export const POST = withSession(
         const ok = !!p && (!p.errors || p.errors.length === 0) && normalize(p.response?.text ?? '') === normalize(text ?? 'dummy');
         return json({ result: ok ? 'write_succeeded' : 'write_rejected', mutationErrors: p?.errors?.length ?? null });
       }
-      const d = await mightyGraphql<Read>(token, OWN_ANSWER_QUERY, { fieldId, memberId: target });
-      const got = d.network?.customField?.answers.nodes[0]?.text ?? null;
-      return json({
-        result: got === null ? 'no_answer_visible' : 'answer_visible',
-        matchesExpected: text && got !== null ? normalize(got) === normalize(text) : null,
-      });
+      if (action === 'read_own') {
+        const got = (await readOwnAnswers(token)).get(fieldId) ?? null;
+        return json({
+          result: got === null ? 'no_answer_visible' : 'answer_visible',
+          matchesExpected: text && got !== null ? normalize(got) === normalize(text) : null,
+        });
+      }
+      // read_other: try BOTH member-scoped paths; any visible text is a failure.
+      const attempt = async <T,>(q: string, v: Record<string, unknown>, pick: (d: T) => string | null) => {
+        try {
+          const got = pick(await mightyGraphql<T>(token, q, v));
+          return got === null ? 'no_answer_visible' : 'ANSWER_VISIBLE';
+        } catch (e) {
+          return `blocked:${e instanceof MightyApiError ? e.safeCode : 'UNKNOWN'}`;
+        }
+      };
+      type Other = { node: { customFieldResponses?: { nodes: { text: string | null; customField: { id: string } | null }[] } } | null };
+      const viaField = await attempt<Read>(OWN_ANSWER_QUERY, { fieldId, memberId: target }, (d) => d.network?.customField?.answers.nodes[0]?.text ?? null);
+      const viaMember = await attempt<Other>(OTHER_MEMBER_RESPONSES_QUERY, { memberId: target }, (d) =>
+        d.node?.customFieldResponses?.nodes.find((n) => n.customField?.id === fieldId)?.text ?? null,
+      );
+      return json({ result: viaField.startsWith('ANSWER') || viaMember.startsWith('ANSWER') ? 'LEAK' : 'no_leak', viaField, viaMember });
     } catch (e) {
       return json({ result: 'error', code: e instanceof MightyApiError ? e.safeCode : 'UNKNOWN' });
     }
