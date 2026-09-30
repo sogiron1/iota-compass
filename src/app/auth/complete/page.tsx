@@ -6,12 +6,12 @@ import HandoffClient from './HandoffClient';
 export const dynamic = 'force-dynamic';
 
 const MESSAGES: Record<string, string> = {
-  cancelled: 'Connection was cancelled. You can close this window and try again.',
-  state: 'This sign-in link expired. Close this window and tap Connect again.',
-  exchange: 'We could not finish connecting to Mighty. Close this window and try again.',
-  issuer: 'We could not verify the sign-in. Close this window and try again.',
-  code: 'We could not finish connecting to Mighty. Close this window and try again.',
-  rate: 'Too many attempts. Please wait a minute and try again.',
+  cancelled: 'Connection was cancelled.',
+  state: 'This sign-in link expired.',
+  exchange: 'We could not finish connecting to Mighty.',
+  issuer: 'We could not verify the sign-in.',
+  code: 'We could not finish connecting to Mighty.',
+  rate: 'Too many attempts. Please wait a minute.',
 };
 
 export default async function AuthComplete({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -24,6 +24,7 @@ export default async function AuthComplete({ searchParams }: { searchParams: Pro
         handoff={handoff && handoff.length <= 128 ? handoff : null}
         error={error ? MESSAGES[error] : null}
         appOrigin={config.appOrigin}
+        popup={sp.m === 'popup'}
       />
     </main>
   );

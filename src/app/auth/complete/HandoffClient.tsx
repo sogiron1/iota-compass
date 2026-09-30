@@ -6,10 +6,12 @@ export default function HandoffClient({
   handoff,
   error,
   appOrigin,
+  popup,
 }: {
   handoff: string | null;
   error: string | null;
   appOrigin: string;
+  popup: boolean;
 }) {
   const [status, setStatus] = useState<'sending' | 'sent' | 'orphan'>('sending');
 
@@ -31,6 +33,16 @@ export default function HandoffClient({
       <section className="card" role="alert">
         <h1 className="title">Not connected</h1>
         <p>{error}</p>
+        {popup ? (
+          <p>You can close this window and try again.</p>
+        ) : (
+          <div className="actions">
+            {/* manual=1 shows the Connect button instead of retrying automatically */}
+            <a className="button primary" href="/?manual=1">
+              Back to IOTA Compass
+            </a>
+          </div>
+        )}
       </section>
     );
   }

@@ -44,6 +44,29 @@ const inIframe = () => {
   }
 };
 
+// Auto-connect: an unauthenticated visit starts Mighty sign-in by itself, so
+// members never need to tap Connect. Mighty remembers consent, so a returning
+// member bounces straight back signed in. Guards against loops: never after a
+// failed claim, never with ?manual=1 (error and disconnect screens), and at most
+// 2 automatic attempts per 2 minutes per tab.
+const AUTO_KEY = 'compass_auto_attempts';
+function autoConnectAllowed(): boolean {
+  if (new URLSearchParams(window.location.search).has('manual')) return false;
+  try {
+    const now = Date.now();
+    const prev = JSON.parse(sessionStorage.getItem(AUTO_KEY) || '[]') as number[];
+    const recent = prev.filter((t) => now - t < 120_000);
+    if (recent.length >= 2) return false;
+    sessionStorage.setItem(AUTO_KEY, JSON.stringify([...recent, now]));
+  } catch {
+    // Storage unavailable: the structural guards above still prevent loops.
+  }
+  return true;
+}
+function startSignIn() {
+  window.location.href = inIframe() ? '/api/auth/start?mode=iframe' : '/api/auth/start?mode=redirect';
+}
+
 export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' | 'iframe' }) {
   const [view, setView] = useState<View>({ name: 'loading' });
   const [me, setMe] = useState<Me | null>(null);
@@ -54,7 +77,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
   const [confirming, setConfirming] = useState<null | 'submit' | 'disconnect'>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const load = useCallback(async (): Promise<Me | null> => {
+  const load = useCallback(async (auto = false): Promise<Me | null> => {
     try {
       const data = await api<Me>('/api/me');
       setMe(data);
@@ -63,13 +86,18 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       return data;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
+        if (auto && embedAuthMode === 'iframe' && autoConnectAllowed()) {
+          setView({ name: 'loading' });
+          startSignIn();
+          return null;
+        }
         setView({ name: 'connect' });
         return null;
       }
       setView({ name: 'connect', error: 'We could not load your Compass. Please try again.' });
       return null;
     }
-  }, []);
+  }, [embedAuthMode]);
 
   const route = useCallback((data: Me) => {
     if (data.northStar) return setView({ name: 'home' });
@@ -86,10 +114,13 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       try {
         const r = await api<{ token: string }>('/api/session/claim', { method: 'POST', body: { code } });
         setMemoryToken(r.token);
+        try {
+          sessionStorage.removeItem(AUTO_KEY);
+        } catch {}
         const d = await load();
         if (d) route(d);
       } catch {
-        setView({ name: 'connect', error: 'The connection expired. Please tap Connect again.' });
+        setView({ name: 'connect', error: 'We could not finish connecting to Mighty. Please tap Connect to try again.' });
       }
     },
     [load, route],
@@ -104,7 +135,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       void claim(m[1]);
       return;
     }
-    void load().then((d) => d && route(d));
+    void load(true).then((d) => d && route(d));
   }, [load, route, claim]);
 
   // Move focus to the new screen's heading for keyboard and screen-reader users.
@@ -268,6 +299,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       {view.name === 'loading' && (
         <section className="card center" aria-busy="true">
           <p className="muted">Opening your Compass…</p>
+          <p className="small muted">Connecting with your Mighty account.</p>
         </section>
       )}
 
