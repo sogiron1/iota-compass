@@ -44,11 +44,12 @@ const inIframe = () => {
   }
 };
 
-// Auto-connect: an unauthenticated visit starts Mighty sign-in by itself, so
-// members never need to tap Connect. Mighty remembers consent, so a returning
-// member bounces straight back signed in. Guards against loops: never after a
-// failed claim, never with ?manual=1 (error and disconnect screens), and at most
-// 2 automatic attempts per 2 minutes per tab.
+// Auto-connect: every open starts Mighty sign-in by itself, so members never
+// tap Connect, and the app always shows the member who is signed in to Mighty
+// right now. Mighty remembers consent, so this is a silent bounce. Guards
+// against loops: never after a failed claim, never with ?manual=1 (error
+// screens), and at most 2 unfinished attempts per 2 minutes per tab (a
+// successful sign-in resets the count).
 const AUTO_KEY = 'compass_auto_attempts';
 function autoConnectAllowed(): boolean {
   if (new URLSearchParams(window.location.search).has('manual')) return false;
@@ -77,7 +78,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
   const [confirming, setConfirming] = useState<null | 'submit' | 'disconnect'>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const load = useCallback(async (auto = false): Promise<Me | null> => {
+  const load = useCallback(async (): Promise<Me | null> => {
     try {
       const data = await api<Me>('/api/me');
       setMe(data);
@@ -86,18 +87,13 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       return data;
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
-        if (auto && embedAuthMode === 'iframe' && autoConnectAllowed()) {
-          setView({ name: 'loading' });
-          startSignIn();
-          return null;
-        }
         setView({ name: 'connect' });
         return null;
       }
       setView({ name: 'connect', error: 'We could not load your Compass. Please try again.' });
       return null;
     }
-  }, [embedAuthMode]);
+  }, []);
 
   const route = useCallback((data: Me) => {
     if (data.northStar) return setView({ name: 'home' });
@@ -135,8 +131,14 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       void claim(m[1]);
       return;
     }
-    void load(true).then((d) => d && route(d));
-  }, [load, route, claim]);
+    // Fresh open: always re-verify who is signed in to Mighty (silent when the
+    // member already approved IOTA Compass). No stored session is reused.
+    if (embedAuthMode === 'iframe' && autoConnectAllowed()) {
+      startSignIn();
+      return;
+    }
+    setView({ name: 'connect' });
+  }, [claim, embedAuthMode]);
 
   // Move focus to the new screen's heading for keyboard and screen-reader users.
   useEffect(() => {

@@ -8,7 +8,10 @@ import { config } from './config';
 export const SESSION_COOKIE = '__Host-compass_session';
 // __Secure- (not __Host-) because it is scoped to Path=/auth/complete.
 export const HANDOFF_COOKIE = '__Secure-compass_handoff';
-const SESSION_TTL_DAYS = 30;
+// Sessions live only in the page's memory (Bearer header). Every fresh open of
+// IOTA Compass re-verifies the member with Mighty, so a shared browser can never
+// show one member's answers to the next Mighty user. 12 hours covers one sitting.
+const SESSION_TTL_HOURS = 12;
 
 export type Session = { sessionId: string; memberId: string; mightyMemberId: string };
 
@@ -18,17 +21,19 @@ export async function createSession(memberId: string): Promise<string> {
   await tx(null, (c) =>
     c.query(
       `insert into app_sessions(token_hash, member_id, expires_at)
-       values ($1, $2, now() + ($3 || ' days')::interval)`,
-      [sha256(token), memberId, String(SESSION_TTL_DAYS)],
+       values ($1, $2, now() + ($3 || ' hours')::interval)`,
+      [sha256(token), memberId, String(SESSION_TTL_HOURS)],
     ),
   );
   return token;
 }
 
 function tokenFrom(req: NextRequest): string | null {
+  // Bearer only. Session cookies are no longer issued or accepted: a cookie
+  // outlives a Mighty account switch in the same browser.
   const auth = req.headers.get('authorization');
   if (auth?.startsWith('Bearer ')) return auth.slice(7).trim() || null;
-  return req.cookies.get(SESSION_COOKIE)?.value ?? null;
+  return null;
 }
 
 export async function getSession(req: NextRequest): Promise<Session | null> {
@@ -51,25 +56,7 @@ export async function revokeSession(sessionId: string) {
   await tx(null, (c) => c.query('update app_sessions set revoked_at = now() where id = $1', [sessionId]));
 }
 
-/**
- * Cookie for the embedded (cross-site iframe) context: SameSite=None, Secure,
- * Partitioned (CHIPS). If the browser drops it, the client also holds the
- * token in memory and sends it as a Bearer header.
- */
-export function setSessionCookie(res: NextResponse, token: string, sameSite: 'None' | 'Lax' = 'None') {
-  const maxAge = SESSION_TTL_DAYS * 86400;
-  const parts = [
-    `${SESSION_COOKIE}=${token}`,
-    'Path=/',
-    `Max-Age=${maxAge}`,
-    'HttpOnly',
-    'Secure',
-    `SameSite=${sameSite}`,
-  ];
-  if (sameSite === 'None') parts.push('Partitioned');
-  res.headers.append('Set-Cookie', parts.join('; '));
-}
-
+/** Removes session cookies issued by earlier builds. */
 export function clearSessionCookie(res: NextResponse) {
   res.headers.append('Set-Cookie', `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned`);
   res.headers.append('Set-Cookie', `${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`);

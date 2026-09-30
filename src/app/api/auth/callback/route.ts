@@ -5,7 +5,6 @@ import { config } from '@/lib/config';
 import { exchangeCode, issuer, OAuthError } from '@/lib/mighty/oauth';
 import { getViewerId } from '@/lib/mighty/operations';
 import { storeTokens } from '@/lib/credentials';
-import { createSession, setSessionCookie } from '@/lib/session';
 import { log } from '@/lib/log';
 import { clientKey, rateLimit } from '@/lib/ratelimit';
 import { HANDOFF_COOKIE } from '@/lib/session';
@@ -64,8 +63,8 @@ export async function GET(req: NextRequest) {
       return id;
     });
 
-    if (mode === 'iframe') {
-      // Sign-in happened inside the Mighty embed. Return a one-time, 2-minute
+    if (mode === 'iframe' || mode === 'redirect') {
+      // Sign-in happened inside the Mighty embed (or a top-level tab). Return a one-time, 2-minute
       // handoff code in the URL fragment: fragments are never sent to servers
       // or in Referer, and the client strips it immediately after claiming.
       const handoff = randomToken(32);
@@ -96,10 +95,7 @@ export async function GET(req: NextRequest) {
       return res;
     }
 
-    const token = await createSession(memberId);
-    const res = done('/');
-    setSessionCookie(res, token, 'Lax');
-    return res;
+    return done('/');
   } catch (e) {
     const code = e instanceof OAuthError ? e.safeCode : 'callback_failed';
     log.warn('auth.callback_failed', { code: code.slice(0, 40) });

@@ -45,7 +45,12 @@ profiles do not show Private fields; Hosts see answers on each field's Responses
 
 ## Security model
 
-- Tokens never reach the browser. Access and refresh tokens are AES-256-GCM encrypted
+- Every open re-verifies the member with Mighty (a silent OAuth bounce once the
+  member has approved IOTA Compass), so members never tap Connect and the app always
+  shows whoever is signed in to Mighty right now. The app session lives only in page
+  memory as a Bearer token (12-hour expiry); no session cookie is issued or accepted,
+  because a cookie would outlive a Mighty account switch on a shared browser.
+- Mighty tokens never reach the browser. Access and refresh tokens are AES-256-GCM encrypted
   at rest with a key held only in Vercel.
 - The Mighty member ID comes only from `me` using the member's own token, never from
   request input.

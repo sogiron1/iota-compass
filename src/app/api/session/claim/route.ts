@@ -2,7 +2,7 @@ import { type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { tx } from '@/lib/db';
 import { sha256 } from '@/lib/crypto';
-import { assertSameOriginWrite, createSession, setSessionCookie } from '@/lib/session';
+import { assertSameOriginWrite, clearSessionCookie, createSession } from '@/lib/session';
 import { json } from '@/lib/http';
 import { clientKey, rateLimit } from '@/lib/ratelimit';
 
@@ -29,9 +29,9 @@ export async function POST(req: NextRequest) {
   if (!memberId) return json({ error: 'expired' }, 400);
 
   const token = await createSession(memberId);
-  // Token goes in an HttpOnly partitioned cookie AND back to the in-memory
-  // client, which uses it as a Bearer header if the cookie is blocked.
+  // The token lives only in the page's memory and is sent as a Bearer header.
+  // Also purge any session cookie left by earlier builds.
   const res = json({ token });
-  setSessionCookie(res, token, 'None');
+  clearSessionCookie(res);
   return res;
 }
