@@ -93,6 +93,10 @@ function startSignIn(ctx: FrameContext) {
   window.location.href = ctx === 'mighty-frame' ? '/api/auth/start?mode=iframe' : '/api/auth/start?mode=redirect';
 }
 
+function hasPendingSync(d: Me): boolean {
+  return Boolean((d.baseline && d.sync.snapshotSynced === false) || (d.northStar && d.sync.northStarSynced === false));
+}
+
 export default function CompassApp({
   embedAuthMode,
   mightyOrigin,
@@ -145,7 +149,20 @@ export default function CompassApp({
           sessionStorage.removeItem(AUTO_KEY);
         } catch {}
         const d = await load();
-        if (d) route(d);
+        if (d) {
+          route(d);
+          // Silent automatic retry: every open has a fresh Mighty sign-in, so
+          // anything that did not reach Mighty earlier is sent now, in the
+          // background, without the member having to do anything.
+          if (hasPendingSync(d)) {
+            try {
+              await api('/api/sync/retry', { method: 'POST' });
+              await load();
+            } catch {
+              // Still pending; the member sees the notice and can tap to retry.
+            }
+          }
+        }
       } catch {
         setView({ name: 'connect', error: 'We could not finish connecting to Mighty. Please tap Connect to try again.' });
       }
@@ -322,8 +339,8 @@ export default function CompassApp({
   }
 
   // ---- Render -----------------------------------------------------------
-  const syncPending =
-    me && ((me.sync.snapshotSynced === false && me.baseline) || (me.sync.northStarSynced === false && me.northStar));
+  const syncPending = me !== null && hasPendingSync(me);
+  const signedInView = !['loading', 'connect', 'open-window'].includes(view.name);
 
   return (
     <main className="shell">
@@ -332,7 +349,7 @@ export default function CompassApp({
           {notice.text}
         </div>
       )}
-      {syncPending && view.name === 'home' && (
+      {syncPending && signedInView && (
         <div className="notice notice-warn" role="status">
           Your answers are safely saved; we are finishing the connection to Mighty.{' '}
           <button className="link" onClick={retrySync} disabled={busy}>
