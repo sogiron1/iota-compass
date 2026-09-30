@@ -563,7 +563,7 @@ export default function CompassApp({
               Revise
             </button>
             <button className="primary" onClick={saveNorthStar} disabled={busy || !northStarDraft.trim()}>
-              {busy ? 'Saving\u2026' : 'It sounds like me. Save it'}
+              {busy ? 'Saving…' : 'It sounds like me. Save it'}
             </button>
           </div>
         </NsStep>
