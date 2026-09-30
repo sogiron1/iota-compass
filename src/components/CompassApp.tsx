@@ -30,10 +30,11 @@ type View =
   | { name: 'question'; index: number }
   | { name: 'review' }
   | { name: 'saved-exit' }
-  | { name: 'ns-orient' }
+  | { name: 'ns-orient'; page: number }
   | { name: 'ns-discover' }
   | { name: 'ns-write' }
   | { name: 'ns-voice' }
+  | { name: 'ns-saved' }
   | { name: 'home' }
   | { name: 'snapshot-read' };
 
@@ -127,7 +128,7 @@ export default function CompassApp({
 
   const route = useCallback((data: Me) => {
     if (data.northStar) return setView({ name: 'home' });
-    if (data.baseline) return setView({ name: 'ns-orient' });
+    if (data.baseline) return setView({ name: 'ns-orient', page: 0 });
     const firstEmpty = QUESTION_KEYS.findIndex((k) => !(data.drafts[k] ?? '').trim());
     const anyStarted = QUESTION_KEYS.some((k) => (data.drafts[k] ?? '').trim());
     if (!anyStarted) return setView({ name: 'snapshot-intro', page: 0 });
@@ -260,7 +261,7 @@ export default function CompassApp({
       const r = await api<{ sync: SyncState }>('/api/snapshot/submit', { method: 'POST' });
       const d = await load();
       reportSync(r.sync, 'Your IOTA Baseline is saved and in Mighty.');
-      if (d) setView({ name: 'ns-orient' });
+      if (d) setView({ name: 'ns-orient', page: 0 });
     } catch (e) {
       const code = e instanceof ApiError ? e.code : '';
       setNotice({
@@ -303,10 +304,11 @@ export default function CompassApp({
     setBusy(true);
     setNotice(null);
     try {
+      const firstSave = !me?.northStar;
       const r = await api<{ sync: SyncState }>('/api/north-star', { method: 'POST', body: { statement: text } });
       await load();
       reportSync(r.sync, 'Your IOTA North Star is saved and in Mighty.');
-      setView({ name: 'home' });
+      setView(firstSave ? { name: 'ns-saved' } : { name: 'home' });
     } catch {
       setNotice({ kind: 'error', text: 'We could not save your North Star. Your draft is kept. Please try again.' });
     } finally {
@@ -487,23 +489,47 @@ export default function CompassApp({
       )}
 
       {view.name === 'ns-orient' && (
-        <NsStep step={1} title="Your IOTA North Star" headingRef={headingRef} onNext={() => setView({ name: 'ns-discover' })}>
-          {NORTH_STAR.orient.map((p) => (
-            <p key={p}>{p}</p>
+        <section className="card">
+          <p className="eyebrow">IOTA North Star</p>
+          <h1 className="title" ref={headingRef} tabIndex={-1}>
+            {NORTH_STAR.orient[view.page].title}
+          </h1>
+          {NORTH_STAR.orient[view.page].paragraphs.map((p) => (
+            <p key={p.slice(0, 32)} className={p === 'The IOTA North Star is that orientation.' ? 'emphasis' : undefined}>
+              {p}
+            </p>
           ))}
-        </NsStep>
+          <div className="actions">
+            {view.page > 0 && (
+              <button className="secondary" onClick={() => setView({ name: 'ns-orient', page: view.page - 1 })}>
+                Back
+              </button>
+            )}
+            <button
+              className="primary"
+              onClick={() =>
+                view.page < NORTH_STAR.orient.length - 1
+                  ? setView({ name: 'ns-orient', page: view.page + 1 })
+                  : setView({ name: 'ns-discover' })
+              }
+            >
+              {view.page < NORTH_STAR.orient.length - 1 ? 'Continue' : 'Begin'}
+            </button>
+          </div>
+        </section>
       )}
 
       {view.name === 'ns-discover' && (
         <NsStep
-          step={2}
+          step={1}
           title="Discover"
           headingRef={headingRef}
-          onBack={() => setView({ name: 'ns-orient' })}
+          onBack={() => setView({ name: 'ns-orient', page: NORTH_STAR.orient.length - 1 })}
           onNext={() => setView({ name: 'ns-write' })}
         >
           <p className="prompt">{NORTH_STAR.discover}</p>
-          <p className="muted">Take a moment with this before you write.</p>
+          <p className="muted">{NORTH_STAR.discoverNote}</p>
+          <Examples />
         </NsStep>
       )}
 
@@ -526,20 +552,44 @@ export default function CompassApp({
       )}
 
       {view.name === 'ns-voice' && (
-        <NsStep step={4} title="Voice check" headingRef={headingRef} onBack={() => setView({ name: 'ns-write' })}>
+        <NsStep step={3} title="Read it aloud" headingRef={headingRef} onBack={() => setView({ name: 'ns-write' })}>
           {NORTH_STAR.voiceCheck.map((p) => (
-            <p key={p}>{p}</p>
+            <p key={p.slice(0, 32)}>{p}</p>
           ))}
           <blockquote className="statement">{northStarDraft.trim()}</blockquote>
+          <p className="small muted">{NORTH_STAR.saveNote}</p>
           <div className="actions">
             <button className="secondary" onClick={() => setView({ name: 'ns-write' })}>
               Revise
             </button>
             <button className="primary" onClick={saveNorthStar} disabled={busy || !northStarDraft.trim()}>
-              {busy ? 'Saving…' : 'It sounds like me. Save it'}
+              {busy ? 'Saving\u2026' : 'It sounds like me. Save it'}
             </button>
           </div>
         </NsStep>
+      )}
+
+      {view.name === 'ns-saved' && me?.northStar && (
+        <section className="card">
+          <p className="eyebrow">IOTA North Star</p>
+          <h1 className="title" ref={headingRef} tabIndex={-1}>
+            {NORTH_STAR.saved.title}
+          </h1>
+          <blockquote className="statement">{me.northStar.statement}</blockquote>
+          {NORTH_STAR.saved.paragraphs.map((p) => (
+            <p key={p.slice(0, 32)}>{p}</p>
+          ))}
+          <p className="small">
+            <a href={`${mightyOrigin}/your-settings/private-responses`} target="_blank" rel="noopener noreferrer">
+              {NORTH_STAR.saved.profileLinkText}
+            </a>
+          </p>
+          <div className="actions">
+            <button className="primary" onClick={() => setView({ name: 'home' })}>
+              Continue
+            </button>
+          </div>
+        </section>
       )}
 
       {view.name === 'home' && me?.northStar && (
@@ -578,7 +628,7 @@ export default function CompassApp({
             ))}
           </ol>
           <div className="actions">
-            <button className="primary" onClick={() => setView(me.northStar ? { name: 'home' } : { name: 'ns-orient' })}>
+            <button className="primary" onClick={() => setView(me.northStar ? { name: 'home' } : { name: 'ns-orient', page: 0 })}>
               Back
             </button>
           </div>
@@ -675,7 +725,7 @@ function NsStep(props: {
 }) {
   return (
     <section className="card">
-      <p className="eyebrow">IOTA North Star · Step {props.step} of 4</p>
+      <p className="eyebrow">IOTA North Star · Step {props.step} of 3</p>
       <h1 className="title" ref={props.headingRef} tabIndex={-1}>
         {props.title}
       </h1>
@@ -709,7 +759,7 @@ function NsWrite(props: {
   const over = charCount(props.value) > MAX_CHARS;
   return (
     <section className="card">
-      <p className="eyebrow">IOTA North Star · Step 3 of 4</p>
+      <p className="eyebrow">IOTA North Star · Step 2 of 3</p>
       <h1 className="title" ref={props.headingRef} tabIndex={-1}>
         <label htmlFor="north-star">Write</label>
       </h1>
@@ -729,15 +779,7 @@ function NsWrite(props: {
         <Counter value={props.value} />
         <SaveIndicator status={props.status} />
       </div>
-      <details className="examples">
-        <summary>See examples</summary>
-        <p className="muted small">These are examples only. Write your own.</p>
-        <ul>
-          {NORTH_STAR.examples.map((e) => (
-            <li key={e.slice(0, 24)}>{e}</li>
-          ))}
-        </ul>
-      </details>
+      <Examples />
       <div className="actions">
         <button className="secondary" onClick={props.onBack}>
           Back
@@ -747,5 +789,19 @@ function NsWrite(props: {
         </button>
       </div>
     </section>
+  );
+}
+
+function Examples() {
+  return (
+    <details className="examples">
+      <summary>See examples of an IOTA North Star</summary>
+      <p className="muted small">{NORTH_STAR.examplesIntro}</p>
+      <ul>
+        {NORTH_STAR.examples.map((e) => (
+          <li key={e.slice(0, 24)}>{e}</li>
+        ))}
+      </ul>
+    </details>
   );
 }

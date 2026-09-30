@@ -52,19 +52,36 @@ export const SNAPSHOT_INTRO: string[][] = [
   ],
 ];
 
-// North Star steps. Orient/Voice-check wording is drawn from the brief and is
-// PENDING STEVE'S APPROVAL against the full North Star lesson copy.
+// IOTA North Star copy: Steve's approved lesson text (30 Sep 2026), arranged
+// into two orientation screens and three steps. His Step 4 ("add it to your
+// profile") happens automatically on save, so its wording is adapted for the
+// saved screen.
 export const NORTH_STAR = {
   orient: [
-    'Your IOTA North Star is a precise personal description of your life.',
-    'It is not an affirmation, a motivational statement, or a goal.',
+    {
+      title: 'Your IOTA North Star',
+      paragraphs: [
+        'We are going to ask you to do one short exercise now that will shape every part of what comes next.',
+        'It’s called your IOTA North Star. It’s a single, personal description of how your life is when your Inner Organic Technology is activated and you are directing it.',
+        'Here’s why this matters.',
+        'Activation is not abstract. As your IOTA activates over the four weeks ahead, your system begins to organize itself around something. The question is what. Without a clear orientation, your activated capacity will still produce real changes — but those changes will not necessarily move in the direction that matters most to you. With a clear orientation, your activated capacity organizes around that orientation, naturally and without force.',
+        'The IOTA North Star is that orientation.',
+      ],
+    },
+    {
+      title: 'Before you write',
+      paragraphs: [
+        'It is not an affirmation. It is not a motivational statement. It is not a goal. It is a precise description of how you are when your system is operating at a higher level — written in your own voice, in your own language, true to your own life.',
+        'And here is what to understand before you write it. The reason this may not be consistently expressed in your life yet is not a lack of effort or intention. It is that the underlying capacity required to sustain it has remained dormant. IOTA changes that. As IOTA activates, your system begins to organize around this naturally. You don’t need to force it or figure out how to make it happen. You simply need a clear orientation.',
+        'That is the point. You are not writing a wish. You are writing the description of a life that your activated IOT will organize itself toward.',
+        'The first clear answer is usually the right one. Don’t overthink it. Begin.',
+      ],
+    },
   ],
   discover: 'What do you want your life to look like when your Inner Organic Technology is activated and yours to direct?',
-  write: 'Now write it in one or two sentences, as if your life is already like that.',
-  voiceCheck: [
-    'Read it aloud once.',
-    'Revise it until it sounds true, natural, and like your own voice.',
-  ],
+  discoverNote: 'Most people don’t need to think very hard about this. The answer is usually already there.',
+  examplesIntro:
+    'This is not an affirmation or a motivational statement. It is a concise description of how you are when your system is operating at a higher level.',
   examples: [
     'My life is organized around what matters — my family, my work, my integrity — and it advances with clarity and force. There is a sense of expansion in how I live and what becomes possible.',
     'I experience depth, connection, and real contact with people and with life. There is a strong sense of aliveness and meaning in how I move through it.',
@@ -72,6 +89,23 @@ export const NORTH_STAR = {
     'There is a clear direction in my life, and it is moving. What I take on evolves, builds, and opens into more.',
     'There is coherence between what I sense, what I choose, and how my life unfolds. It creates a level of alignment that continues to expand.',
   ],
+  write: 'Write one or two sentences as if your life is already like that. Don’t try to perfect it. The first clear answer is usually the right one.',
+  voiceCheck: [
+    'Read your sentence out loud once. Adjust the wording until it sounds exactly like something you would say — and something you can feel yourself living from.',
+    'This isn’t about making it sound impressive. It’s about making it sound true, in your voice.',
+    'If it feels generic, simplify it. If it sounds like you, keep it.',
+  ],
+  saveNote:
+    'When you save, your IOTA North Star is added to your Mighty profile. It remains private to you unless you choose to share it.',
+  saved: {
+    title: 'Your IOTA North Star is set',
+    paragraphs: [
+      'It is now on your Mighty profile, private to you unless you choose to share it.',
+      'Your North Star will be present with you throughout the program — read before each hands-on session and each daily practice, read again after, carried with you into your daily life. It will be accessible from anywhere in the platform.',
+      'By the end of the four weeks, your system will already be organizing itself around what you wrote — the foundation laid, the direction clear, the work of living into it underway. And as you progress, you will feel something new: your North Star itself beginning to activate your IOT in real-life moments, calling the capacity forward exactly when your life requires it.',
+    ],
+    profileLinkText: 'See it in your private profile responses',
+  },
 };
 
 /** Mighty counts characters; count Unicode code points so emoji count once. */
