@@ -12,8 +12,12 @@ North Star history.
 
 ## How it works
 
-1. A member opens the "My IOTA Compass" Page in the Iota Genesis Space. The Page embeds
-   this app with Mighty's **Require Mighty Sign-in** option.
+1. A member opens the **"My IOTA Compass" lesson** in the First Steps course of the
+   *Introduction to IOTA Genesis Program* Space (that Space's one Page slot is used by
+   Hyper Resources). The lesson embeds this app with "This embed uses a Mighty OAuth
+   application" ticked. Mighty has no edit for embed settings: to change them, delete
+   the embed and insert it again. In the Mighty phone app, every embed shows as a
+   "Tap to open" card (Mighty behaviour), after which the app signs in by itself.
 2. The member connects with Mighty OAuth (authorization code + PKCE S256, confidential
    client). There is no separate password. Sign-in runs inside the embed
    (`EMBED_AUTH_MODE=iframe`, the default): Mighty's sign-in page allows framing by
@@ -83,6 +87,15 @@ insert into mighty_field_map(field_key, mighty_field_id, label) values
 
 Get GlobalIDs from the hosted explorer:
 `network { customFields(first: 50) { nodes { id title status privacy } } }`.
+
+### Launch checklist
+
+1. OAuth app named "IOTA Compass" (members see this name on the one-time approval
+   screen; Mighty has no skip-consent option).
+2. Lesson visibility: Hidden until go-live, then Visible.
+3. Test data removed: Test A/B answers deleted from the 9 fields with
+   `deleteCustomFieldAnswer` (host explorer); app database member rows deleted
+   (cascade). Staging Space and test accounts kept for post-launch checks.
 
 ### Page visibility
 
