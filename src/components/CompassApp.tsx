@@ -179,7 +179,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
     try {
       const r = await api<{ sync: SyncState }>('/api/snapshot/submit', { method: 'POST' });
       const d = await load();
-      reportSync(r.sync, 'Your Starting Snapshot is saved and in Mighty.');
+      reportSync(r.sync, 'Your IOTA Baseline is saved and in Mighty.');
       if (d) setView({ name: 'ns-orient' });
     } catch (e) {
       const code = e instanceof ApiError ? e.code : '';
@@ -299,7 +299,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       {view.name === 'snapshot-intro' && (
         <section className="card">
           <p className="eyebrow">
-            Starting Snapshot · {view.page + 1} of {SNAPSHOT_INTRO.length}
+            Your IOTA Baseline · {view.page + 1} of {SNAPSHOT_INTRO.length}
           </p>
           <h1 className="title" ref={headingRef} tabIndex={-1}>
             {view.page === 0 ? 'Where you are right now' : view.page === 1 ? 'Why we start here' : 'You will come back to this'}
@@ -344,11 +344,11 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
 
       {view.name === 'review' && (
         <section className="card">
-          <p className="eyebrow">Starting Snapshot · Review</p>
+          <p className="eyebrow">Your IOTA Baseline · Review</p>
           <h1 className="title" ref={headingRef} tabIndex={-1}>
             Review your answers
           </h1>
-          <p className="muted">When you submit, this becomes your starting baseline and cannot be changed.</p>
+          <p className="muted">When you submit, this becomes your IOTA Baseline and cannot be changed.</p>
           <ol className="review">
             {QUESTION_KEYS.map((k, i) => (
               <li key={k}>
@@ -365,14 +365,14 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
               Back
             </button>
             <button className="primary" onClick={() => setConfirming('submit')} disabled={busy || confirming === 'submit'}>
-              {busy ? 'Submitting…' : 'Submit my Starting Snapshot'}
+              {busy ? 'Submitting…' : 'Submit my IOTA Baseline'}
             </button>
           </div>
           {confirming === 'submit' && (
             <div className="confirm" role="alertdialog" aria-labelledby="confirm-submit-title" aria-describedby="confirm-submit-body">
-              <h2 id="confirm-submit-title" className="subtitle">Submit your Starting Snapshot?</h2>
+              <h2 id="confirm-submit-title" className="subtitle">Submit your IOTA Baseline?</h2>
               <p id="confirm-submit-body">
-                This becomes your starting baseline. You will read it again at the end of the program, and it cannot be changed after you submit.
+                This becomes your IOTA Baseline. You will read it again at the end of the IOTA Genesis Program, and it cannot be changed after you submit.
               </p>
               <div className="actions">
                 <button className="secondary" onClick={() => setConfirming(null)}>
@@ -470,7 +470,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
             </button>
             {me.baseline && (
               <button className="secondary" onClick={() => setView({ name: 'snapshot-read' })}>
-                View my Starting Snapshot
+                View my IOTA Baseline
               </button>
             )}
           </div>
@@ -498,9 +498,9 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
 
       {view.name === 'snapshot-read' && me?.baseline && (
         <section className="card">
-          <p className="eyebrow">Starting Snapshot</p>
+          <p className="eyebrow">IOTA Baseline</p>
           <h1 className="title" ref={headingRef} tabIndex={-1}>
-            Your starting baseline
+            Your IOTA Baseline
           </h1>
           <p className="muted">Submitted {new Date(me.baseline.submittedAt).toLocaleDateString()}</p>
           <ol className="review">
@@ -558,7 +558,7 @@ function QuestionScreen(props: {
   return (
     <section className="card">
       <p className="eyebrow">
-        Starting Snapshot · {props.index + 1} of {QUESTION_KEYS.length}
+        Your IOTA Baseline · {props.index + 1} of {QUESTION_KEYS.length}
       </p>
       <progress className="progress" max={QUESTION_KEYS.length} value={props.index + 1} aria-label={`Question ${props.index + 1} of ${QUESTION_KEYS.length}`} />
       <h1 className="title" ref={props.headingRef} tabIndex={-1}>

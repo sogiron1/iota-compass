@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'IOTA Compass',
-  description: 'Starting Snapshot and IOTA North Star for the IOTA Genesis Program.',
+  description: 'Your IOTA Baseline and IOTA North Star for the IOTA Genesis Program.',
   robots: { index: false, follow: false },
 };
 

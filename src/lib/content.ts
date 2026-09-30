@@ -9,30 +9,34 @@ export const FIELD_KEYS = [...QUESTION_KEYS, 'north_star'] as const;
 export type FieldKey = (typeof FIELD_KEYS)[number];
 
 export const QUESTIONS: Record<QuestionKey, { prompt: string; fieldLabel: string }> = {
-  q1: { prompt: 'What brought you to this program?', fieldLabel: 'IOTA Snapshot — What brought you here?' },
-  q2: { prompt: 'What is working in your life right now?', fieldLabel: 'IOTA Snapshot — What is working?' },
-  q3: { prompt: 'What isn’t?', fieldLabel: 'IOTA Snapshot — What isn’t working?' },
+  q1: { prompt: 'What brought you to this program?', fieldLabel: 'IOTA Baseline 1 — What brought you here?' },
+  q2: { prompt: 'What is working in your life right now?', fieldLabel: 'IOTA Baseline 2 — What is working?' },
+  q3: { prompt: 'What isn’t?', fieldLabel: 'IOTA Baseline 3 — What isn’t working?' },
   q4: {
     prompt: 'What have you already tried in order to change how you experience your life?',
-    fieldLabel: 'IOTA Snapshot — What have you tried?',
+    fieldLabel: 'IOTA Baseline 4 — What have you tried?',
   },
-  q5: { prompt: 'Where did it get you, and where did it stop?', fieldLabel: 'IOTA Snapshot — Where did it get you, and where did it stop?' },
+  q5: { prompt: 'Where did it get you, and where did it stop?', fieldLabel: 'IOTA Baseline 5 — Where did it stop?' },
   q6: {
     prompt: 'What is the thing about yourself, or your life, that has stayed the same no matter what you have done about it?',
-    fieldLabel: 'IOTA Snapshot — What has not moved?',
+    fieldLabel: 'IOTA Baseline 6 — What has not moved?',
   },
-  q7: { prompt: 'How long has it been that way?', fieldLabel: 'IOTA Snapshot — How long has it been that way?' },
+  q7: { prompt: 'How long has it been that way?', fieldLabel: 'IOTA Baseline 7 — How long has it been?' },
   q8: {
     prompt: 'Is there anything else your facilitator should know about you before you walk in?',
-    fieldLabel: 'IOTA Snapshot — Anything else your facilitator should know?',
+    fieldLabel: 'IOTA Baseline 8 — For your facilitator',
   },
 };
 
 export const NORTH_STAR_FIELD_LABEL = 'My IOTA North Star';
 
-// Starting Snapshot introduction — supplied text, split into short sections.
+// Your IOTA Baseline introduction. The first paragraph is Steve's approved
+// framing (30 Sep); the rest is the supplied text, split into short sections.
+// Internal keys (q1–q8, SNAPSHOT_*) are unchanged on purpose.
+export const BASELINE_NAME = 'Your IOTA Baseline';
 export const SNAPSHOT_INTRO: string[][] = [
   [
+    'Your IOTA Baseline is an accurate record of where you are right now, before your Inner Organic Technology is activated. You will come back to it at the end of the IOTA Genesis Program.',
     'By the end of this program you will be operating from a baseline you have never had. Not an improved version of the one you are on now — a different one.',
     'Inner Organic Technology is a capacity evolution pre-engineered into human physiology and left dormant. This program activates it. What emerges is the Thrive State.',
     'This is not optimization. It is evolution.',
