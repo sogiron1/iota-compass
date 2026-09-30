@@ -25,6 +25,7 @@ type Me = {
 type View =
   | { name: 'loading' }
   | { name: 'connect'; error?: string }
+  | { name: 'open-window' }
   | { name: 'snapshot-intro'; page: number }
   | { name: 'question'; index: number }
   | { name: 'review' }
@@ -43,6 +44,29 @@ const inIframe = () => {
     return true;
   }
 };
+
+// Where are we running? Mighty's sign-in page may only be framed by Mighty's
+// own site ("framing is same-origin only"). That holds for the Page on the web
+// (desktop or phone browser), but not inside the Mighty mobile app, where the
+// embed's parent is not the network's web origin. There, sign-in must open in
+// its own window, which needs one tap.
+type FrameContext = 'top' | 'mighty-frame' | 'other-frame';
+function frameContext(mightyOrigin: string): FrameContext {
+  if (!inIframe()) return 'top';
+  try {
+    const ao = (window.location as Location & { ancestorOrigins?: DOMStringList }).ancestorOrigins;
+    if (ao && ao.length > 0) {
+      for (let i = 0; i < ao.length; i++) if (ao[i] !== mightyOrigin) return 'other-frame';
+      return 'mighty-frame';
+    }
+    // Browsers without ancestorOrigins: parent must be the top window and the
+    // referrer must be the Mighty network.
+    const ref = document.referrer ? new URL(document.referrer).origin : '';
+    return window.parent === window.top && ref === mightyOrigin ? 'mighty-frame' : 'other-frame';
+  } catch {
+    return 'other-frame';
+  }
+}
 
 // Auto-connect: every open starts Mighty sign-in by itself, so members never
 // tap Connect, and the app always shows the member who is signed in to Mighty
@@ -64,11 +88,17 @@ function autoConnectAllowed(): boolean {
   }
   return true;
 }
-function startSignIn() {
-  window.location.href = inIframe() ? '/api/auth/start?mode=iframe' : '/api/auth/start?mode=redirect';
+function startSignIn(ctx: FrameContext) {
+  window.location.href = ctx === 'mighty-frame' ? '/api/auth/start?mode=iframe' : '/api/auth/start?mode=redirect';
 }
 
-export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' | 'iframe' }) {
+export default function CompassApp({
+  embedAuthMode,
+  mightyOrigin,
+}: {
+  embedAuthMode: 'popup' | 'iframe';
+  mightyOrigin: string;
+}) {
   const [view, setView] = useState<View>({ name: 'loading' });
   const [me, setMe] = useState<Me | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -133,12 +163,19 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
     }
     // Fresh open: always re-verify who is signed in to Mighty (silent when the
     // member already approved IOTA Compass). No stored session is reused.
+    const ctx = frameContext(mightyOrigin);
+    if (ctx === 'other-frame') {
+      // Mighty mobile app: sign-in cannot run inside the embed. One tap opens
+      // IOTA Compass in its own window, signed in.
+      setView({ name: 'open-window' });
+      return;
+    }
     if (embedAuthMode === 'iframe' && autoConnectAllowed()) {
-      startSignIn();
+      startSignIn(ctx);
       return;
     }
     setView({ name: 'connect' });
-  }, [claim, embedAuthMode]);
+  }, [claim, embedAuthMode, mightyOrigin]);
 
   // Move focus to the new screen's heading for keyboard and screen-reader users.
   useEffect(() => {
@@ -157,9 +194,19 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
     return () => window.removeEventListener('message', onMessage);
   }, [claim]);
 
+  function openInWindow() {
+    const w = window.open('/api/auth/start?mode=redirect', '_blank');
+    if (!w) window.location.href = '/api/auth/start?mode=redirect';
+  }
+
   function connect() {
-    if (!inIframe()) {
+    const ctx = frameContext(mightyOrigin);
+    if (ctx === 'top') {
       window.location.href = '/api/auth/start?mode=redirect';
+      return;
+    }
+    if (ctx === 'other-frame') {
+      openInWindow();
       return;
     }
     if (embedAuthMode === 'iframe') {
@@ -291,6 +338,21 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
         <section className="card center" aria-busy="true">
           <p className="muted">Opening your Compass…</p>
           <p className="small muted">Connecting with your Mighty account.</p>
+        </section>
+      )}
+
+      {view.name === 'open-window' && (
+        <section className="card">
+          <p className="eyebrow">IOTA Genesis Program</p>
+          <h1 className="title" ref={headingRef} tabIndex={-1}>
+            My IOTA Compass
+          </h1>
+          <p>Your IOTA Compass opens in its own window, signed in with your Mighty account.</p>
+          <div className="actions">
+            <button className="primary" onClick={openInWindow}>
+              Open my IOTA Compass
+            </button>
+          </div>
         </section>
       )}
 
