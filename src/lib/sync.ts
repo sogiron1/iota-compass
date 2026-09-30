@@ -3,7 +3,8 @@ import { tx } from './db';
 import { log } from './log';
 import { config } from './config';
 import { getAccessToken } from './credentials';
-import { writeOwnAnswer } from './mighty/operations';
+import { readOwnAnswersDetailed, writeOwnAnswer } from './mighty/operations';
+import { mightyNorthStarToAdopt } from './northStarAdopt';
 import { MightyApiError } from './mighty/graphql';
 import { QUESTION_KEYS, type FieldKey } from './content';
 
@@ -168,5 +169,55 @@ async function alertAdmin(kind: string, memberId: string) {
     });
   } catch {
     /* best effort */
+  }
+}
+
+/**
+ * Backfill: if the member edited their IOTA North Star directly in Mighty
+ * (Settings > Private responses), adopt it as a new app version. The new
+ * version is already in Mighty, so its sync is recorded as succeeded
+ * (FROM_MIGHTY) and nothing is written back. Best-effort; never throws.
+ */
+export async function adoptMightyNorthStar(memberId: string): Promise<boolean> {
+  try {
+    const fieldId = (await fieldMap()).get('north_star' satisfies FieldKey);
+    if (!fieldId) return false;
+    const current = await tx(memberId, async (c) => {
+      const ns = await c.query<{ id: string; statement: string; created_at: string }>(
+        'select id, statement, created_at from north_stars where is_active',
+      );
+      const row = ns.rows[0];
+      if (!row) return null;
+      const ev = await c.query<{ total: string; done: string }>(
+        `select count(*) as total, count(*) filter (where status = 'succeeded') as done
+           from sync_events where record_type = 'north_star' and record_id = $1`,
+        [row.id],
+      );
+      const synced = Number(ev.rows[0].total) > 0 && ev.rows[0].total === ev.rows[0].done;
+      return { statement: row.statement, createdAt: new Date(row.created_at).toISOString(), synced };
+    });
+    if (!current) return false;
+    const token = await getAccessToken(memberId);
+    if (!token) return false;
+    const mighty = (await readOwnAnswersDetailed(token)).get(fieldId) ?? null;
+    const text = mightyNorthStarToAdopt({
+      active: { statement: current.statement, createdAt: current.createdAt },
+      activeSynced: current.synced,
+      mighty,
+    });
+    if (!text) return false;
+    await tx(memberId, async (c) => {
+      const saved = await c.query<{ id: string }>('select (save_north_star($1)).id as id', [text]);
+      await c.query(
+        `insert into sync_events(member_id, record_type, record_id, field_key, mighty_custom_field_id, status, safe_error_code)
+         values ($1, 'north_star', $2, 'north_star', $3, 'succeeded', 'FROM_MIGHTY')`,
+        [memberId, saved.rows[0].id, fieldId],
+      );
+    });
+    log.info('north_star.adopted_from_mighty', { memberId });
+    return true;
+  } catch {
+    log.warn('north_star.adopt_failed', { memberId });
+    return false;
   }
 }

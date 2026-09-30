@@ -1,6 +1,6 @@
 import { tx } from '@/lib/db';
 import { json, withSession } from '@/lib/http';
-import { syncStatus } from '@/lib/sync';
+import { adoptMightyNorthStar, syncStatus } from '@/lib/sync';
 import { getAccessToken } from '@/lib/credentials';
 import { readOwnAnswer } from '@/lib/mighty/operations';
 
@@ -8,6 +8,10 @@ export const dynamic = 'force-dynamic';
 
 export const GET = withSession(
   async (_req, s) => {
+    // Pick up a North Star the member edited directly in Mighty's private
+    // responses, so the app and Mighty never disagree.
+    await adoptMightyNorthStar(s.memberId);
+
     const data = await tx(s.memberId, async (c) => {
       const drafts = await c.query<{ draft_key: string; answer: string }>('select draft_key, answer from drafts');
       const sub = await c.query<{ id: string; submitted_at: string }>(

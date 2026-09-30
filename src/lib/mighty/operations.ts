@@ -52,7 +52,7 @@ export const ME_RESPONSES_QUERY = /* GraphQL */ `
   query CompassMyResponses {
     me {
       customFieldResponses(first: 50, answeredOnly: true) {
-        nodes { text customField { id } }
+        nodes { text lastEditedAt customField { id } }
       }
     }
   }
@@ -120,8 +120,26 @@ export async function writeOwnAnswer(
 }
 
 type ResponsesResult = {
-  me: { customFieldResponses: { nodes: { text: string | null; customField: { id: string } | null }[] } } | null;
+  me: {
+    customFieldResponses: {
+      nodes: { text: string | null; lastEditedAt?: string | null; customField: { id: string } | null }[];
+    };
+  } | null;
 };
+
+export type OwnAnswer = { text: string; lastEditedAt: string | null };
+
+/** The viewer's own answers with last-edited times, keyed by custom-field GlobalID. */
+export async function readOwnAnswersDetailed(accessToken: string): Promise<Map<string, OwnAnswer>> {
+  const data = await mightyGraphql<ResponsesResult>(accessToken, ME_RESPONSES_QUERY);
+  const out = new Map<string, OwnAnswer>();
+  for (const n of data.me?.customFieldResponses.nodes ?? []) {
+    if (n.customField?.id && typeof n.text === 'string') {
+      out.set(String(n.customField.id), { text: n.text, lastEditedAt: n.lastEditedAt ?? null });
+    }
+  }
+  return out;
+}
 
 /** The viewer's own answers keyed by custom-field GlobalID. */
 export async function readOwnAnswers(accessToken: string): Promise<Map<string, string>> {

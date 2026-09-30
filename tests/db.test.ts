@@ -95,4 +95,19 @@ describe('schema + RLS', () => {
       asMember(A, () => db.query("insert into drafts(member_id, draft_key, answer) values ($1,'q4',$2)", [A, ok + 'x'])),
     ).rejects.toThrow();
   });
+
+  it('app role can record a North Star adopted from Mighty as already synced', async () => {
+    await asMember(B, () => db.query("select save_north_star('B v1')"));
+    const adopted = await asMember(B, async () => {
+      const saved = await db.query<{ id: string }>("select (save_north_star('B edited in Mighty')).id as id");
+      await db.query(
+        `insert into sync_events(member_id, record_type, record_id, field_key, mighty_custom_field_id, status, safe_error_code)
+         values ($1, 'north_star', $2, 'north_star', 'f', 'succeeded', 'FROM_MIGHTY')`,
+        [B, saved.rows[0].id],
+      );
+      return db.query<{ statement: string; version: number }>('select statement, version from north_stars where is_active');
+    });
+    expect(adopted.rows[0]).toEqual({ statement: 'B edited in Mighty', version: 2 });
+  });
 });
+
