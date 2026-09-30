@@ -75,7 +75,7 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
   const [northStarDraft, setNorthStarDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ kind: 'ok' | 'warn' | 'error'; text: string } | null>(null);
-  const [confirming, setConfirming] = useState<null | 'submit' | 'disconnect'>(null);
+  const [confirming, setConfirming] = useState<null | 'submit'>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   const load = useCallback(async (): Promise<Me | null> => {
@@ -264,17 +264,6 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
       setNotice({ kind: 'error', text: 'We could not save your North Star. Your draft is kept. Please try again.' });
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function disconnect() {
-    setConfirming(null);
-    try {
-      await api('/api/disconnect', { method: 'POST' });
-    } finally {
-      setMemoryToken(null);
-      setMe(null);
-      setView({ name: 'connect' });
     }
   }
 
@@ -508,25 +497,6 @@ export default function CompassApp({ embedAuthMode }: { embedAuthMode: 'popup' |
               </button>
             )}
           </div>
-          <p className="small">
-            <button className="link" onClick={() => setConfirming('disconnect')}>
-              Disconnect this device
-            </button>
-          </p>
-          {confirming === 'disconnect' && (
-            <div className="confirm" role="alertdialog" aria-labelledby="confirm-dc-title">
-              <h2 id="confirm-dc-title" className="subtitle">Disconnect this device?</h2>
-              <p>Your answers stay saved. You will connect again next time you open IOTA Compass.</p>
-              <div className="actions">
-                <button className="secondary" onClick={() => setConfirming(null)}>
-                  Cancel
-                </button>
-                <button className="primary" onClick={disconnect} autoFocus>
-                  Disconnect
-                </button>
-              </div>
-            </div>
-          )}
         </section>
       )}
 
