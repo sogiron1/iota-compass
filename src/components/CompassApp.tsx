@@ -178,6 +178,11 @@ export default function CompassApp({
     setView({ name: 'connect' });
   }, [claim, embedAuthMode, mightyOrigin]);
 
+  // Opened on its own (not inside Mighty): paint the app's own page background.
+  useEffect(() => {
+    if (!inIframe()) document.documentElement.classList.add('standalone');
+  }, []);
+
   // Move focus to the new screen's heading for keyboard and screen-reader users.
   useEffect(() => {
     headingRef.current?.focus();
