@@ -15,7 +15,11 @@ North Star history.
 1. A member opens the "My IOTA Compass" Page in the Iota Genesis Space. The Page embeds
    this app with Mighty's **Require Mighty Sign-in** option.
 2. The member connects with Mighty OAuth (authorization code + PKCE S256, confidential
-   client). There is no separate password.
+   client). There is no separate password. Sign-in runs inside the embed
+   (`EMBED_AUTH_MODE=iframe`, the default): Mighty's sign-in page allows framing by
+   same-origin parents, and the Page is on the Mighty origin. Popups were blocked in
+   testing, so popup mode is kept only as an option. "Open IOTA Compass in a new tab"
+   is the fallback.
 3. Drafts autosave to Neon. Submitting the IOTA Baseline creates an immutable
    baseline, then writes each answer to its Mighty field, one `updateCustomFieldAnswer`
    per field, and verifies the echo. Success is shown only when every field confirms.
@@ -75,6 +79,12 @@ insert into mighty_field_map(field_key, mighty_field_id, label) values
 Get GlobalIDs from the hosted explorer:
 `network { customFields(first: 50) { nodes { id title status privacy } } }`.
 
+### Page visibility
+
+New Mighty Pages start **Hidden**. After adding the "My IOTA Compass" Page to a Space,
+a Host opens the Page's three-dot menu and sets it to **Visible**. Hosts who are not
+members of a private Space can open it directly at `/spaces/<id>`.
+
 ## Deploy
 
 Deploys go through the Vercel API from this repository's files, and every file's SHA-1
@@ -114,7 +124,7 @@ schema is additive; there are no destructive migrations in the MVP.
 | Incident | Action |
 | --- | --- |
 | Suspected secret exposure | Rotate the OAuth client secret in Mighty and update Vercel (stored tokens become unreadable, so members reconnect). Rotate the Neon password. |
-| Cross-member data concern | Set `EMBED_AUTH_MODE` aside and remove the Page from the Space (the app becomes unreachable from Mighty), then investigate using `sync_events` and the logs. |
+| Cross-member data concern | Hide or remove the Page from the Space (the app becomes unreachable from Mighty), then investigate using `sync_events` and the logs. |
 | Mighty API outage | Members can still save; submissions queue as pending. Retry when Mighty recovers. |
 | Member deletion request | Delete the `members` row (cascades to all app data), clear their Mighty fields as a Host, and record the date. |
 
